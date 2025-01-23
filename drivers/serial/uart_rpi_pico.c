@@ -153,6 +153,8 @@ static int uart_rpi_init(const struct device *dev)
 	}
 
 #ifdef CONFIG_UART_INTERRUPT_DRIVEN
+	hw_write_masked(&uart_hw->lcr_h, UART_UARTLCR_H_FEN_BITS,
+		UART_UARTLCR_H_FEN_BITS);
 	config->irq_config_func(dev);
 #endif /* CONFIG_UART_INTERRUPT_DRIVEN */
 
@@ -249,7 +251,6 @@ static void uart_rpi_irq_tx_enable(const struct device *dev)
 	uart_hw_t * const uart_hw = config->uart_regs;
 
 	uart_hw->imsc |= UART_UARTIMSC_TXIM_BITS;
-	uart_hw->ifls &= ~UART_UARTIFLS_TXIFLSEL_BITS;
 }
 
 static void uart_rpi_irq_tx_disable(const struct device *dev)
@@ -273,8 +274,8 @@ static void uart_rpi_irq_rx_enable(const struct device *dev)
 	const struct uart_rpi_config * const config = dev->config;
 	uart_hw_t * const uart_hw = config->uart_regs;
 
-	uart_hw->imsc |= UART_UARTIMSC_RXIM_BITS;
-	uart_hw->ifls &= ~UART_UARTIFLS_RXIFLSEL_BITS;
+	// Trigger interrupts on 1/2 full FIFO or RX timeout
+	uart_hw->imsc |= (UART_UARTIMSC_RXIM_BITS | UART_UARTIMSC_RTIM_BITS);
 }
 
 static void uart_rpi_irq_rx_disable(const struct device *dev)
@@ -298,7 +299,7 @@ static int uart_rpi_irq_rx_ready(const struct device *dev)
 	const struct uart_rpi_config * const config = dev->config;
 	uart_hw_t * const uart_hw = config->uart_regs;
 
-	return (uart_hw->mis & UART_UARTMIS_RXMIS_BITS) == UART_UARTMIS_RXMIS_BITS;
+	return (uart_hw->mis & (UART_UARTMIS_RXMIS_BITS | UART_UARTMIS_RTMIS_BITS)) != 0;
 }
 
 static void uart_rpi_irq_err_enable(const struct device *dev)
