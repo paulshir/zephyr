@@ -46,6 +46,7 @@ struct st7789v_config {
 	uint8_t rgb_param[3];
 	uint16_t height;
 	uint16_t width;
+	uint8_t ready_time_ms;
 };
 
 struct st7789v_data {
@@ -376,6 +377,8 @@ static int st7789v_init(const struct device *dev)
 		}
 	}
 
+	k_sleep(K_TIMEOUT_ABS_MS(config->ready_time_ms));
+
 	st7789v_reset_display(dev);
 
 	st7789v_blanking_on(dev);
@@ -450,6 +453,7 @@ static const struct display_driver_api st7789v_api = {
 		.rgb_param = DT_INST_PROP(inst, rgb_param),				\
 		.width = DT_INST_PROP(inst, width),					\
 		.height = DT_INST_PROP(inst, height),					\
+		.ready_time_ms = DT_INST_PROP(inst, ready_time_ms),			\
 	};										\
 											\
 	static struct st7789v_data st7789v_data_ ## inst = {				\
