@@ -24,6 +24,10 @@ static const struct device *const uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
 static char rx_buf[MSG_SIZE];
 static int rx_buf_pos;
 
+static const char fifo_data[] = "This is a FIFO test.\r\n";
+#define FIFO_DATA_SIZE (sizeof(fifo_data))
+static int tx_buf_pos = FIFO_DATA_SIZE;
+
 /*
  * Read characters from UART until line end is detected. Afterwards push the
  * data to the message queue.
@@ -34,6 +38,20 @@ void serial_cb(const struct device *dev, void *user_data)
 
 	if (!uart_irq_update(uart_dev)) {
 		return;
+	}
+
+	if (uart_irq_tx_ready(dev) && tx_buf_pos < FIFO_DATA_SIZE) {
+		int ret = uart_fifo_fill(dev, (uint8_t *)&fifo_data[tx_buf_pos],
+				     FIFO_DATA_SIZE - tx_buf_pos);
+
+		if (ret > 0) {
+			tx_buf_pos += ret;
+		}
+
+		if (ret == 0 || tx_buf_pos == FIFO_DATA_SIZE) {
+			uart_irq_tx_disable(dev);
+		}
+
 	}
 
 	if (!uart_irq_rx_ready(uart_dev)) {
@@ -70,6 +88,12 @@ void print_uart(char *buf)
 	}
 }
 
+void print_fifo_uart()
+{
+	tx_buf_pos = 0;
+	uart_irq_tx_enable(uart_dev);
+}
+
 int main(void)
 {
 	char tx_buf[MSG_SIZE];
@@ -94,6 +118,7 @@ int main(void)
 	}
 	uart_irq_rx_enable(uart_dev);
 
+	print_fifo_uart();
 	print_uart("Hello! I'm your echo bot.\r\n");
 	print_uart("Tell me something and press enter:\r\n");
 

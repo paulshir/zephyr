@@ -3,3 +3,9 @@ description: Raspberry Pi Pico PIO UART
 compatible: "raspberrypi,pico-uart-pio"
 
 include: [uart-controller.yaml, "raspberrypi,pico-pio-device.yaml"]
+
+properties:
+  interrupt-index:
+    type: int
+    description: Specifie the index of the PIO interrupt to use
+    default: 0
